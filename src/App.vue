@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import Text from '@/components/Text'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { parseZip } from '@/utils/unzip'
+import { buildTree, gen } from './utils/zip'
 const paleteModel = ref<boolean>(false)
 const colorsModel = ref<boolean>(false)
+const file = ref<File | null>(null)
+
 function checkFile(ev: DragEvent) {
   ev.preventDefault()
   ev.stopPropagation()
@@ -26,24 +29,27 @@ function dropHandler(ev: DragEvent) {
 
   if (dataTransferItem !== undefined) {
     const materialDesignZip = dataTransferItem.getAsFile()
-    parseFiles(materialDesignZip)
+    file.value = materialDesignZip
   }
 }
 
 const fileChange = async (event: Event) => {
   const { files } = event.target as HTMLInputElement
   if (files !== null) {
-    const file = files.item(0)
-    parseFiles(file)
+    const _file = files.item(0)
+    file.value = _file
   }
 }
 
-async function parseFiles(file: File | null) {
-  if (file !== null) {
-    await parseZip(file, {
+async function parseFiles() {
+  if (file.value !== null) {
+    const result = await parseZip(file.value, {
       palette: paleteModel.value,
       moudleModifier: colorsModel.value
     })
+
+    // const inputArgs = buildTree(result)
+    await gen(result)
   }
 }
 </script>
@@ -51,9 +57,12 @@ async function parseFiles(file: File | null) {
 <template>
   <header>
     <Text title="Material Design Token to Xcode Assets" />
+    <h6 class="text-lg mt-8 italic font-serial">
+      You can build your own Material Design Token in
+      <a href="https://m3.material.io/theme-builder" target="_blank">theme builder</a>
+    </h6>
   </header>
-
-  <main>
+  <main class="mt-8">
     <div
       class="p-4 h-40 border border-dashed border-gray-400 rounded-lg relative flex items-center justify-center"
       @dragstart="checkFile"
@@ -94,15 +103,21 @@ async function parseFiles(file: File | null) {
         <input type="checkbox" class="border-solid text-indigo-600" v-model="paleteModel" />
         <span class="ml-2">Include Palette(s) </span>
       </label>
-      <label class="inline-flex items-center ml-3">
-        <input type="checkbox" class="border-solid text-indigo-600" v-model="colorsModel" />
-        <span class="ml-2">Include `colors.modules`</span>
-      </label>
+      <VTooltip>
+        <label class="inline-flex items-center ml-8">
+          <input type="checkbox" class="border-solid text-indigo-600" v-model="colorsModel" />
+          <span class="ml-2">Include `colors.module`</span>
+        </label>
+        <template #popper> colors.module.css will transform as SwiftUI Modifier</template>
+      </VTooltip>
     </div>
 
     <div class="mt-4">
       <button
         class="mt-6 flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 cursor-pointer"
+        @click="parseFiles"
+        :class="{ 'cursor-not-allowed': file == null }"
+        :disabled="file === null"
       >
         Process
       </button>
@@ -118,19 +133,10 @@ header {
 @media (min-width: 1024px) {
   header {
     display: flex;
+    flex-direction: column;
     place-items: center;
     padding-right: calc(var(--section-gap) / 2);
     justify-content: center;
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
   }
 }
 </style>
