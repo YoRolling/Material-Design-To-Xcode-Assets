@@ -57,7 +57,7 @@ export function buildTree({ ext, color }: InputArgs) {
     name: 'MaterialDesign.xcassets',
     children: [
       {
-        name: 'Contens.json',
+        name: 'Contents.json',
         code: false,
         dir: false
       },
